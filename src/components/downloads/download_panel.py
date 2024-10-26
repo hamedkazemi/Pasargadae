@@ -16,6 +16,7 @@ class DownloadPanel(QWidget):
         
         # Add search bar
         self.search_bar = SearchContainer(self._is_dark)
+        self.search_bar.searchTextChanged.connect(self.handle_search)
         layout.addWidget(self.search_bar)
         
         # Add download table
@@ -23,6 +24,10 @@ class DownloadPanel(QWidget):
         layout.addWidget(self.download_table)
         
         self.apply_theme()
+    
+    def handle_search(self, text):
+        """Handle search text changes"""
+        self.download_table.handle_search(text)
     
     def apply_theme(self):
         styles = Styles.get_styles(self._is_dark)
