@@ -1,0 +1,14 @@
+[tool.poetry]
+name = "pasargadae"
+version = "0.1.0"
+description = ""
+authors = ["HK <hamedk@outlook.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+PySide6 = {version = "^6.8.0.2", python = ">=3.6,<3.18"},
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
