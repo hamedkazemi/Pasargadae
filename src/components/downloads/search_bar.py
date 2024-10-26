@@ -1,11 +1,13 @@
 from PyQt6.QtWidgets import QLineEdit, QFrame, QHBoxLayout, QLabel
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QIcon, QColor
 from src.theme.styles import Styles
 from src.utils.icon_provider import IconProvider
 from src.theme.colors import Colors
 
 class SearchContainer(QFrame):
+    searchTextChanged = pyqtSignal(str)  # Signal for search text changes
+    
     def __init__(self, is_dark=True, parent=None):
         super().__init__(parent)
         self._is_dark = is_dark
@@ -24,6 +26,7 @@ class SearchContainer(QFrame):
         
         # Create search bar
         self.search_bar = SearchBar(self._is_dark, self)
+        self.search_bar.textChanged.connect(self.searchTextChanged.emit)
         layout.addWidget(self.search_bar)
         
         # Set fixed height
