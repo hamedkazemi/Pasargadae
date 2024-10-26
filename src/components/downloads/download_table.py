@@ -3,21 +3,11 @@ from PyQt6.QtCore import Qt, pyqtSignal
 from src.theme.styles import Styles
 from .table.header_checkbox import HeaderCheckBox
 from .table.row_checkbox import RowCheckBox
-from .table.progress_bar import DownloadProgressBar
 from .table.file_type_icon import FileTypeIcon
 from .table.context_menu import DownloadContextMenu
 from .table.header_context_menu import HeaderContextMenu
-from src.repositories.download_repository import DownloadRepository
-
-class SortableTableWidgetItem(QTableWidgetItem):
-    def __init__(self, text, sort_key=None):
-        super().__init__(text)
-        self._sort_key = sort_key if sort_key is not None else text
-    
-    def __lt__(self, other):
-        if isinstance(other, SortableTableWidgetItem):
-            return self._sort_key < other._sort_key
-        return super().__lt__(other)
+from .table.table_actions import TableActions
+from .table.table_data_handler import TableDataHandler
 
 class DownloadTable(QTableWidget):
     sortingChanged = pyqtSignal(int, Qt.SortOrder)  # column, order
@@ -25,7 +15,8 @@ class DownloadTable(QTableWidget):
     def __init__(self, is_dark=True):
         super().__init__()
         self._is_dark = is_dark
-        self.repository = DownloadRepository()
+        self.actions = TableActions()
+        self.data_handler = TableDataHandler()
         self.context_menu = DownloadContextMenu(self)
         self.header_context_menu = HeaderContextMenu(self)
         self.setup_ui()
@@ -68,23 +59,76 @@ class DownloadTable(QTableWidget):
         header.setSortIndicatorShown(True)
         header.sectionClicked.connect(self.handle_sort)
         self.setSortingEnabled(True)
+        
+        # Initialize sort state
+        self._current_sort_column = -1
+        self._current_sort_order = Qt.SortOrder.AscendingOrder
     
     def handle_sort(self, logical_index):
         if logical_index in [0, 1]:  # Skip checkbox and icon columns
             return
         
         header = self.horizontalHeader()
-        current_order = header.sortIndicatorOrder()
         
-        # Toggle sort order if clicking the same column
-        if header.sortIndicatorSection() == logical_index:
-            new_order = Qt.SortOrder.DescendingOrder if current_order == Qt.SortOrder.AscendingOrder else Qt.SortOrder.AscendingOrder
-            header.setSortIndicator(logical_index, new_order)
+        # Update sort order
+        if self._current_sort_column == logical_index:
+            # Toggle sort order if clicking the same column
+            self._current_sort_order = (Qt.SortOrder.DescendingOrder 
+                if self._current_sort_order == Qt.SortOrder.AscendingOrder 
+                else Qt.SortOrder.AscendingOrder)
         else:
             # First click on new column, start with ascending
-            header.setSortIndicator(logical_index, Qt.SortOrder.AscendingOrder)
+            self._current_sort_order = Qt.SortOrder.AscendingOrder
+            self._current_sort_column = logical_index
         
-        self.sortItems(logical_index, header.sortIndicatorOrder())
+        # Set the sort indicator before sorting
+        header.setSortIndicator(logical_index, self._current_sort_order)
+        
+        # Perform the sort
+        self.sortItems(logical_index, self._current_sort_order)
+        
+        # Emit the sorting changed signal
+        self.sortingChanged.emit(logical_index, self._current_sort_order)
+    
+    def handle_search(self, search_text):
+        """Filter table rows based on search text"""
+        # Store current sort state
+        sort_column = self._current_sort_column
+        sort_order = self._current_sort_order
+        
+        # Temporarily disable sorting
+        self.setSortingEnabled(False)
+        
+        # Get filtered downloads and update table
+        filtered_downloads = self.data_handler.filter_downloads(search_text)
+        self.populate_table(filtered_downloads)
+        
+        # Restore sorting
+        self.setSortingEnabled(True)
+        if sort_column >= 0:
+            self.sortItems(sort_column, sort_order)
+    
+    def populate_table(self, downloads):
+        """Populate table with the given downloads"""
+        self.setRowCount(len(downloads))
+        for row, download in enumerate(downloads):
+            items = self.data_handler.create_table_items(download, self._is_dark)
+            
+            # Set items in table
+            self.setItem(row, 0, items['id'])
+            self.setCellWidget(row, 0, items['checkbox'])
+            self.setItem(row, 1, items['icon'])
+            self.setItem(row, 2, items['name'])
+            self.setItem(row, 3, items['size'])
+            
+            if isinstance(items['status'], QTableWidgetItem):
+                self.setItem(row, 4, items['status'])
+            else:
+                self.setCellWidget(row, 4, items['status'])
+            
+            self.setItem(row, 5, items['time_left'])
+            self.setItem(row, 6, items['modified'])
+            self.setItem(row, 7, items['speed'])
     
     def setup_context_menus(self):
         # Download context menu
@@ -107,54 +151,21 @@ class DownloadTable(QTableWidget):
     
     def connect_signals(self):
         # Connect context menu signals to handlers
-        self.context_menu.signals.openFile.connect(self.handle_open_file)
-        self.context_menu.signals.openWith.connect(self.handle_open_with)
-        self.context_menu.signals.openFolder.connect(self.handle_open_folder)
-        self.context_menu.signals.moveRename.connect(self.handle_move_rename)
-        self.context_menu.signals.redownload.connect(self.handle_redownload)
-        self.context_menu.signals.resumeDownload.connect(self.handle_resume_download)
-        self.context_menu.signals.stopDownload.connect(self.handle_stop_download)
-        self.context_menu.signals.refreshAddress.connect(self.handle_refresh_address)
-        self.context_menu.signals.addToQueue.connect(self.handle_add_to_queue)
-        self.context_menu.signals.deleteFromQueue.connect(self.handle_delete_from_queue)
-        self.context_menu.signals.showProperties.connect(self.handle_show_properties)
+        self.context_menu.signals.openFile.connect(self.actions.handle_open_file)
+        self.context_menu.signals.openWith.connect(self.actions.handle_open_with)
+        self.context_menu.signals.openFolder.connect(self.actions.handle_open_folder)
+        self.context_menu.signals.moveRename.connect(self.actions.handle_move_rename)
+        self.context_menu.signals.redownload.connect(self.actions.handle_redownload)
+        self.context_menu.signals.resumeDownload.connect(self.actions.handle_resume_download)
+        self.context_menu.signals.stopDownload.connect(self.actions.handle_stop_download)
+        self.context_menu.signals.refreshAddress.connect(self.actions.handle_refresh_address)
+        self.context_menu.signals.addToQueue.connect(self.actions.handle_add_to_queue)
+        self.context_menu.signals.deleteFromQueue.connect(self.actions.handle_delete_from_queue)
+        self.context_menu.signals.showProperties.connect(self.actions.handle_show_properties)
         
         # Connect header context menu signals
         self.header_context_menu.signals.columnVisibilityChanged.connect(
             self.toggle_column_visibility)
-    
-    def handle_open_file(self, download_id):
-        print(f"Opening file for download {download_id}")
-    
-    def handle_open_with(self, download_id):
-        print(f"Open with dialog for download {download_id}")
-    
-    def handle_open_folder(self, download_id):
-        print(f"Opening folder for download {download_id}")
-    
-    def handle_move_rename(self, download_id):
-        print(f"Move/Rename dialog for download {download_id}")
-    
-    def handle_redownload(self, download_id):
-        print(f"Redownloading {download_id}")
-    
-    def handle_resume_download(self, download_id):
-        print(f"Resuming download {download_id}")
-    
-    def handle_stop_download(self, download_id):
-        print(f"Stopping download {download_id}")
-    
-    def handle_refresh_address(self, download_id):
-        print(f"Refreshing address for download {download_id}")
-    
-    def handle_add_to_queue(self, download_id):
-        print(f"Adding download {download_id} to queue")
-    
-    def handle_delete_from_queue(self, download_id):
-        print(f"Deleting download {download_id} from queue")
-    
-    def handle_show_properties(self, download_id):
-        print(f"Showing properties for download {download_id}")
     
     def toggle_column_visibility(self, column, visible):
         self.setColumnHidden(column, not visible)
@@ -170,81 +181,8 @@ class DownloadTable(QTableWidget):
                 checkbox.setChecked(checked)
     
     def load_data(self):
-        downloads = self.repository.get_all()
-        if not downloads:
-            self.repository.add_sample_data()
-            downloads = self.repository.get_all()
-        
-        self.setRowCount(len(downloads))
-        for row, download in enumerate(downloads):
-            # Store download id
-            id_item = QTableWidgetItem()
-            id_item.setData(Qt.ItemDataRole.UserRole, download.id)
-            self.setItem(row, 0, id_item)
-            
-            # Checkbox
-            checkbox = RowCheckBox(self._is_dark)
-            self.setCellWidget(row, 0, checkbox)
-            
-            # File type icon
-            self.setItem(row, 1, FileTypeIcon(download.file_type, self._is_dark))
-            
-            # Name
-            name_item = SortableTableWidgetItem(download.name)
-            self.setItem(row, 2, name_item)
-            
-            # Size
-            size_item = SortableTableWidgetItem(download.size, self._parse_size(download.size))
-            self.setItem(row, 3, size_item)
-            
-            # Status/Progress
-            if download.progress > 0 and download.progress < 100:
-                progress = DownloadProgressBar()
-                progress.setValue(download.progress)
-                self.setCellWidget(row, 4, progress)
-            else:
-                status_item = SortableTableWidgetItem(download.status)
-                self.setItem(row, 4, status_item)
-            
-            # Time Left
-            time_item = SortableTableWidgetItem(download.time_left)
-            self.setItem(row, 5, time_item)
-            
-            # Last Modified
-            modified_item = SortableTableWidgetItem(download.last_modified)
-            self.setItem(row, 6, modified_item)
-            
-            # Speed
-            speed_item = SortableTableWidgetItem(download.speed, self._parse_speed(download.speed))
-            self.setItem(row, 7, speed_item)
-    
-    def _parse_size(self, size_str):
-        """Convert size string to bytes for proper sorting"""
-        try:
-            number = float(''.join(filter(str.isdigit, size_str)))
-            if 'GB' in size_str:
-                return number * 1024 * 1024 * 1024
-            elif 'MB' in size_str:
-                return number * 1024 * 1024
-            elif 'KB' in size_str:
-                return number * 1024
-            return number
-        except:
-            return 0
-    
-    def _parse_speed(self, speed_str):
-        """Convert speed string to bytes/s for proper sorting"""
-        try:
-            number = float(''.join(filter(str.isdigit, speed_str)))
-            if 'GB/s' in speed_str:
-                return number * 1024 * 1024 * 1024
-            elif 'MB/s' in speed_str:
-                return number * 1024 * 1024
-            elif 'KB/s' in speed_str:
-                return number * 1024
-            return number
-        except:
-            return 0
+        downloads = self.data_handler.load_data()
+        self.populate_table(downloads)
     
     def update_theme(self, is_dark):
         self._is_dark = is_dark
