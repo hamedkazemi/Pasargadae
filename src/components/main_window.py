@@ -3,9 +3,14 @@ from qframelesswindow import FramelessMainWindow, StandardTitleBar
 from src.components.window.title_bar import TitleBar
 from PyQt6.QtCore import Qt
 from src.components.toolbar.action_toolbar import ActionToolbar
+from src.components.downloads.download_table import DownloadTableWidget
+from src.components.downloads.search_bar import SearchContainer
 from src.components.navigation.navigation_panel import NavigationPanel
-from src.components.downloads.download_panel import DownloadPanel
 from src.theme.styles import Styles
+from src.core.download_manager import DownloadManager
+from src.settings.manager import SettingsManager
+import os
+from src.utils.logger import Logger
 
 class MainWindow(FramelessMainWindow):
     def __init__(self):
@@ -13,6 +18,13 @@ class MainWindow(FramelessMainWindow):
         self._is_dark = True
         self.setWindowTitle("Pasargadae")
         self.setMinimumSize(1000, 600)
+        
+        # Initialize managers
+        self.settings_manager = SettingsManager(
+            os.path.join(os.path.expanduser("~"), ".pasargadae", "settings.json")
+        )
+        self.download_manager = DownloadManager(self.settings_manager.get_all_settings())
+        Logger.debug("Managers initialized in MainWindow")
         
         # Create main container
         self.container = QWidget()
@@ -45,17 +57,39 @@ class MainWindow(FramelessMainWindow):
         self.navigation_panel = NavigationPanel(self._is_dark)
         content_layout.addWidget(self.navigation_panel)
         
-        # Add download panel
-        self.download_panel = DownloadPanel(self._is_dark)
-        content_layout.addWidget(self.download_panel)
+        # Create downloads area
+        downloads_container = QWidget()
+        downloads_layout = QVBoxLayout(downloads_container)
+        downloads_layout.setContentsMargins(0, 0, 0, 0)
+        downloads_layout.setSpacing(10)
+        
+        # Add search bar
+        self.search_bar = SearchContainer(self._is_dark)
+        downloads_layout.addWidget(self.search_bar)
+        
+        # Add download table
+        self.download_table = DownloadTableWidget()
+        downloads_layout.addWidget(self.download_table)
+        
+        content_layout.addWidget(downloads_container)
         
         # Add widgets to main layout
         layout.addWidget(self.title_bar)
         layout.addWidget(self.toolbar)
         layout.addLayout(content_layout)
         
+        # Connect signals
+        self.search_bar.searchTextChanged.connect(self.filter_downloads)
+        
         # Apply theme
         self.apply_theme(self._is_dark)
+    
+    def filter_downloads(self, search_text: str):
+        """Filter downloads based on search text."""
+        for row in range(self.download_table.rowCount()):
+            item = self.download_table.item(row, 0)  # Name column
+            should_show = not search_text or search_text.lower() in item.text().lower()
+            self.download_table.setRowHidden(row, not should_show)
     
     def on_theme_changed(self, is_dark):
         self._is_dark = is_dark
@@ -66,4 +100,17 @@ class MainWindow(FramelessMainWindow):
         self.setStyleSheet(styles["WINDOW"])
         self.toolbar.update_theme(is_dark)
         self.navigation_panel.update_theme(is_dark)
-        self.download_panel.update_theme(is_dark)
+        self.search_bar.update_theme(is_dark)
+        self.download_table.update_theme(is_dark)
+    
+    def add_download(self, download):
+        """Add a new download."""
+        self.download_table.add_download(download)
+    
+    def update_download(self, download):
+        """Update an existing download."""
+        self.download_table.update_download(download)
+    
+    def remove_download(self, download_id: str):
+        """Remove a download."""
+        self.download_table.remove_download(download_id)
