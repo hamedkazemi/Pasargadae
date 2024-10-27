@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body {
+            width: 300px;
+            padding: 10px;
+            font-family: system-ui, -apple-system, sans-serif;
+        }
+        
+        .header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .header img {
+            width: 24px;
+            height: 24px;
+            margin-right: 10px;
+        }
+        
+        .header h1 {
+            margin: 0;
+            font-size: 16px;
+            font-weight: 500;
+        }
+        
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .status.connected {
+            background-color: #E8F5E9;
+            color: #2E7D32;
+        }
+        
+        .status.disconnected {
+            background-color: #FFEBEE;
+            color: #C62828;
+        }
+        
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        
+        .status.connected .status-dot {
+            background-color: #2E7D32;
+        }
+        
+        .status.disconnected .status-dot {
+            background-color: #C62828;
+        }
+        
+        .toggle {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 40px;
+            height: 24px;
+            margin-right: 10px;
+        }
+        
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 24px;
+        }
+        
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        
+        input:checked + .slider {
+            background-color: #2196F3;
+        }
+        
+        input:checked + .slider:before {
+            transform: translateX(16px);
+        }
+        
+        .shortcuts {
+            background-color: #F5F5F5;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        
+        .shortcuts h2 {
+            margin: 0 0 10px 0;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        .shortcut {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+            font-size: 12px;
+        }
+        
+        .key {
+            background-color: #E0E0E0;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <img src="icons/icon48.png" alt="Logo">
+        <h1>Pasargadae Download Manager</h1>
+    </div>
+    
+    <div id="status" class="status">
+        <div class="status-dot"></div>
+        <span id="status-text">Checking connection...</span>
+    </div>
+    
+    <div class="toggle">
+        <label class="switch">
+            <input type="checkbox" id="capture-toggle">
+            <span class="slider"></span>
+        </label>
+        <span>Capture Downloads</span>
+    </div>
+    
+    <div class="shortcuts">
+        <h2>Keyboard Shortcuts</h2>
+        <div class="shortcut">
+            <span>Toggle Capture</span>
+            <span class="key" id="toggle-key">Alt+Shift+D</span>
+        </div>
+        <div class="shortcut">
+            <span>Force Download</span>
+            <span class="key" id="force-key">Alt+Shift+F</span>
+        </div>
+    </div>
+    
+    <script src="popup.js"></script>
+</body>
+</html>

@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Download Media</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            margin: 0;
+            padding: 20px;
+            width: 500px;
+        }
+        
+        .header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .header img {
+            width: 24px;
+            height: 24px;
+            margin-right: 10px;
+        }
+        
+        .header h1 {
+            margin: 0;
+            font-size: 18px;
+            font-weight: 500;
+        }
+        
+        .media-info {
+            margin-bottom: 20px;
+        }
+        
+        .media-title {
+            font-size: 16px;
+            font-weight: 500;
+            margin-bottom: 10px;
+            word-break: break-all;
+        }
+        
+        .media-details {
+            font-size: 14px;
+            color: #666;
+        }
+        
+        .quality-options {
+            margin-bottom: 20px;
+        }
+        
+        .quality-option {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #eee;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        .quality-option:hover {
+            background-color: #f8f9fa;
+        }
+        
+        .quality-option.selected {
+            background-color: #e3f2fd;
+            border-color: #2196f3;
+        }
+        
+        .quality-radio {
+            margin-right: 10px;
+        }
+        
+        .quality-info {
+            flex: 1;
+        }
+        
+        .quality-label {
+            font-weight: 500;
+            margin-bottom: 5px;
+        }
+        
+        .quality-details {
+            font-size: 12px;
+            color: #666;
+        }
+        
+        .download-options {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+        
+        .option-group {
+            margin-bottom: 10px;
+        }
+        
+        .option-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            font-size: 14px;
+        }
+        
+        .option-group select,
+        .option-group input[type="text"] {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        
+        .actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+        
+        .action-button {
+            padding: 8px 20px;
+            border: none;
+            border-radius: 4px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+        
+        .primary-button {
+            background: #2196f3;
+            color: white;
+        }
+        
+        .primary-button:hover {
+            background: #1976d2;
+        }
+        
+        .secondary-button {
+            background: #e0e0e0;
+            color: #333;
+        }
+        
+        .secondary-button:hover {
+            background: #d5d5d5;
+        }
+        
+        .format-badge {
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 12px;
+            font-weight: 500;
+            margin-left: 5px;
+        }
+        
+        .format-video {
+            background: #e3f2fd;
+            color: #1565c0;
+        }
+        
+        .format-audio {
+            background: #f3e5f5;
+            color: #7b1fa2;
+        }
+        
+        .format-subtitle {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <img src="icons/icon24.png" alt="Logo">
+        <h1>Download Media</h1>
+    </div>
+    
+    <div class="media-info">
+        <div class="media-title" id="media-title">Loading...</div>
+        <div class="media-details" id="media-details"></div>
+    </div>
+    
+    <div class="quality-options" id="quality-options">
+        <!-- Quality options will be added here -->
+    </div>
+    
+    <div class="download-options">
+        <div class="option-group">
+            <label for="download-queue">Download Queue</label>
+            <select id="download-queue">
+                <option value="regular">Regular Queue</option>
+                <option value="high">High Priority</option>
+            </select>
+        </div>
+        
+        <div class="option-group">
+            <label for="save-path">Save Location</label>
+            <input type="text" id="save-path" readonly>
+        </div>
+        
+        <div class="option-group">
+            <label>
+                <input type="checkbox" id="download-subtitles">
+                Download subtitles if available
+            </label>
+        </div>
+    </div>
+    
+    <div class="actions">
+        <button class="action-button secondary-button" id="cancel-button">Cancel</button>
+        <button class="action-button primary-button" id="download-button">Download</button>
+    </div>
+    
+    <template id="quality-option-template">
+        <div class="quality-option">
+            <input type="radio" name="quality" class="quality-radio">
+            <div class="quality-info">
+                <div class="quality-label"></div>
+                <div class="quality-details"></div>
+            </div>
+        </div>
+    </template>
+    
+    <script src="media-dialog.js"></script>
+</body>
+</html>

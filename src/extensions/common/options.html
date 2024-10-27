@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Pasargadae Download Manager Options</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            margin: 0;
+            padding: 20px;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 30px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .header img {
+            width: 48px;
+            height: 48px;
+            margin-right: 15px;
+        }
+        
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+            font-weight: 500;
+        }
+        
+        .section {
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        
+        .section h2 {
+            margin: 0 0 15px 0;
+            font-size: 18px;
+            font-weight: 500;
+        }
+        
+        .option-group {
+            margin-bottom: 15px;
+        }
+        
+        .option-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+        
+        .option-group .description {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 10px;
+        }
+        
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .checkbox-group input[type="checkbox"] {
+            margin-right: 10px;
+        }
+        
+        input[type="text"],
+        input[type="number"],
+        select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        
+        .filters {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        
+        .filters input {
+            flex: 1;
+        }
+        
+        .filters button {
+            padding: 8px 15px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        
+        .filters button:hover {
+            background: #0056b3;
+        }
+        
+        .filter-list {
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 10px;
+        }
+        
+        .filter-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 5px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .filter-item:last-child {
+            border-bottom: none;
+        }
+        
+        .filter-item button {
+            padding: 2px 8px;
+            background: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        
+        .filter-item button:hover {
+            background: #c82333;
+        }
+        
+        .buttons {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        .buttons button {
+            padding: 8px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        .save-button {
+            background: #28a745;
+            color: white;
+        }
+        
+        .save-button:hover {
+            background: #218838;
+        }
+        
+        .reset-button {
+            background: #6c757d;
+            color: white;
+        }
+        
+        .reset-button:hover {
+            background: #5a6268;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <img src="icons/icon48.png" alt="Logo">
+            <h1>Pasargadae Download Manager Options</h1>
+        </div>
+        
+        <div class="section">
+            <h2>Download Settings</h2>
+            
+            <div class="option-group">
+                <label for="capture-mode">Download Capture Mode</label>
+                <div class="description">Choose how downloads are captured</div>
+                <select id="capture-mode">
+                    <option value="all">Capture All Downloads</option>
+                    <option value="ask">Ask Before Capturing</option>
+                    <option value="manual">Manual Capture Only</option>
+                </select>
+            </div>
+            
+            <div class="option-group">
+                <div class="checkbox-group">
+                    <input type="checkbox" id="media-capture">
+                    <label for="media-capture">Capture Media (Video/Audio)</label>
+                </div>
+                <div class="description">Detect and capture streaming media</div>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>File Type Filters</h2>
+            
+            <div class="option-group">
+                <label>File Extensions</label>
+                <div class="description">Add file extensions to capture (e.g., .mp4, .zip)</div>
+                
+                <div class="filters">
+                    <input type="text" id="extension-input" placeholder="Enter file extension">
+                    <button id="add-extension">Add</button>
+                </div>
+                
+                <div class="filter-list" id="extension-list">
+                    <!-- File extensions will be added here -->
+                </div>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>URL Filters</h2>
+            
+            <div class="option-group">
+                <label>Blocked URLs</label>
+                <div class="description">Downloads from these URLs will be ignored</div>
+                
+                <div class="filters">
+                    <input type="text" id="blocked-url-input" placeholder="Enter URL to block">
+                    <button id="add-blocked-url">Add</button>
+                </div>
+                
+                <div class="filter-list" id="blocked-url-list">
+                    <!-- Blocked URLs will be added here -->
+                </div>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>Notifications</h2>
+            
+            <div class="option-group">
+                <div class="checkbox-group">
+                    <input type="checkbox" id="show-notifications">
+                    <label for="show-notifications">Show Desktop Notifications</label>
+                </div>
+                <div class="description">Display notifications for download events</div>
+            </div>
+            
+            <div class="option-group">
+                <div class="checkbox-group">
+                    <input type="checkbox" id="notification-sound">
+                    <label for="notification-sound">Play Notification Sounds</label>
+                </div>
+            </div>
+        </div>
+        
+        <div class="buttons">
+            <button class="reset-button" id="reset">Reset to Defaults</button>
+            <button class="save-button" id="save">Save Changes</button>
+        </div>
+    </div>
+    
+    <script src="options.js"></script>
+</body>
+</html>
