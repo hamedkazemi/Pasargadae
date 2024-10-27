@@ -1,0 +1,104 @@
+{
+  "general": {
+    "startup_with_system": true,
+    "user_interface_language": "English",
+    "notifications_enabled": true,
+    "file_associations": [".exe", ".zip", ".pdf"]
+  },
+  "download": {
+    "default_download_directory": "/home/hamed/Downloads",
+    "temporary_folder": "/tmp/Pasargadae",
+    "file_category_management": {
+      "documents": "/home/hamed/Downloads/Documents",
+      "audio": "/home/hamed/Downloads/Audio",
+      "video": "/home/hamed/Downloads/Video"
+    },
+    "file_naming": "append_numbers_for_duplicates"
+  },
+  "connection": {
+    "connection_type": "high-speed",
+    "max_simultaneous_connections": 8,
+    "max_active_downloads": 4,
+    "proxy_settings": {
+      "enabled": false,
+      "server_address": "",
+      "port": 0,
+      "authentication": {
+        "username": "",
+        "password": ""
+      }
+    }
+  },
+  "scheduler": {
+    "queues": {
+      "high_priority": {
+        "start_time": "02:00",
+        "stop_time": "06:00",
+        "limit_active_downloads": 3,
+        "post_download_action": "shutdown"
+      },
+      "regular": {
+        "start_time": "00:00",
+        "stop_time": "23:59",
+        "limit_active_downloads": 2,
+        "post_download_action": "none"
+      }
+    }
+  },
+  "speed_limiter": {
+    "enabled": true,
+    "max_speed": "500 KB/s",
+    "time_specific_limiter": {
+      "start_time": "08:00",
+      "end_time": "18:00"
+    }
+  },
+  "filters": {
+    "file_type_filter": [".mp4", ".jpg", ".pdf"],
+    "url_filter": {
+      "blocked": [],
+      "allowed": []
+    },
+    "file_size_filter": {
+      "min_size_mb": 0,
+      "max_size_mb": 2048
+    }
+  },
+  "browser_integration": {
+    "enabled_browsers": ["Chrome", "Firefox", "Edge"],
+    "url_sniffer": true,
+    "hotkeys": {
+      "bypass_capture": "Alt",
+      "force_capture": "Ctrl"
+    }
+  },
+  "advanced_download": {
+    "resume_capability": true,
+    "chunk_downloading": true,
+    "retry_limit": 5,
+    "timeout_seconds": 30,
+    "redirect_handling": "automatic"
+  },
+  "notifications": {
+    "visual_notifications": true,
+    "sound_alerts": true,
+    "email_notifications": false,
+    "email_address": ""
+  },
+  "security": {
+    "antivirus_scanning": true,
+    "custom_commands": "",
+    "pre_scan_command": "",
+    "post_scan_command": ""
+  },
+  "logging": {
+    "download_log": true,
+    "history_management_days": 30,
+    "clear_data_on_exit": false
+  },
+  "integrity_checking": {
+    "hash_verification": true,
+    "checksum_algorithm": "MD5",
+    "verification_mode": "auto_verify"
+  }
+}

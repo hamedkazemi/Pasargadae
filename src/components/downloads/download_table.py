@@ -1,201 +1,279 @@
-from PyQt6.QtWidgets import QTableWidget, QTableWidgetItem, QHeaderView
+from PyQt6.QtWidgets import (
+    QTableWidget, QTableWidgetItem, QWidget,
+    QProgressBar, QHBoxLayout, QPushButton,
+    QHeaderView, QMenu, QStyle
+)
 from PyQt6.QtCore import Qt, pyqtSignal
-from src.theme.styles import Styles
-from .table.header_checkbox import HeaderCheckBox
-from .table.row_checkbox import RowCheckBox
-from .table.file_type_icon import FileTypeIcon
-from .table.context_menu import DownloadContextMenu
-from .table.header_context_menu import HeaderContextMenu
-from .table.table_actions import TableActions
-from .table.table_data_handler import TableDataHandler
+from PyQt6.QtGui import QAction
+from typing import Optional, Dict, List
+import os
+from ...models.download import Download, DownloadStatus
+from ...utils.icon_provider import IconProvider
+from ...theme.styles import Styles
 
-class DownloadTable(QTableWidget):
-    sortingChanged = pyqtSignal(int, Qt.SortOrder)  # column, order
+class DownloadTableWidget(QTableWidget):
+    # Signals
+    download_action = pyqtSignal(str, str)  # (action, download_id)
     
-    def __init__(self, is_dark=True):
-        super().__init__()
-        self._is_dark = is_dark
-        self.actions = TableActions()
-        self.data_handler = TableDataHandler()
-        self.context_menu = DownloadContextMenu(self)
-        self.header_context_menu = HeaderContextMenu(self)
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._is_dark = True
+        self.downloads = {}  # id -> Download
         self.setup_ui()
-        self.setup_context_menus()
-        self.setup_sorting()
-        self.load_data()
-        self.connect_signals()
     
     def setup_ui(self):
-        headers = ["", "", "Name", "Size", "Status", "Time Left", 
-                  "Last Modified", "Speed"]
-        
-        self.setColumnCount(len(headers))
-        self.setHorizontalHeaderLabels(headers)
-        self.verticalHeader().setVisible(False)
-        self.setShowGrid(False)
-        self.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
-        
-        # Customize header
-        header = self.horizontalHeader()
-        header.setSectionResizeMode(0, QHeaderView.ResizeMode.Fixed)
-        header.setSectionResizeMode(1, QHeaderView.ResizeMode.Fixed)
-        header.setDefaultSectionSize(150)
-        header.setStretchLastSection(True)
+        # Set columns
+        columns = [
+            "Name", "Status", "Progress", "Speed", 
+            "Size", "Remaining", "Actions"
+        ]
+        self.setColumnCount(len(columns))
+        self.setHorizontalHeaderLabels(columns)
         
         # Set column widths
-        self.setColumnWidth(0, 40)  # Checkbox
-        self.setColumnWidth(1, 30)  # Icon
-        
-        # Add header checkbox
-        self.header_checkbox = HeaderCheckBox(self._is_dark)
-        self.header_checkbox.stateChanged.connect(self.toggle_all_checkboxes)
-        self.horizontalHeader().setDefaultAlignment(Qt.AlignmentFlag.AlignLeft)
-        self.setHorizontalHeaderWidget(0, self.header_checkbox)
-        
-        self.setStyleSheet(Styles.get_styles(self._is_dark)["TABLE"])
-    
-    def setup_sorting(self):
         header = self.horizontalHeader()
-        header.setSortIndicatorShown(True)
-        header.sectionClicked.connect(self.handle_sort)
-        self.setSortingEnabled(True)
+        header.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)  # Name
+        header.setSectionResizeMode(1, QHeaderView.ResizeMode.Fixed)    # Status
+        header.setSectionResizeMode(2, QHeaderView.ResizeMode.Fixed)    # Progress
+        header.setSectionResizeMode(3, QHeaderView.ResizeMode.Fixed)    # Speed
+        header.setSectionResizeMode(4, QHeaderView.ResizeMode.Fixed)    # Size
+        header.setSectionResizeMode(5, QHeaderView.ResizeMode.Fixed)    # Remaining
+        header.setSectionResizeMode(6, QHeaderView.ResizeMode.Fixed)    # Actions
         
-        # Initialize sort state
-        self._current_sort_column = -1
-        self._current_sort_order = Qt.SortOrder.AscendingOrder
-    
-    def handle_sort(self, logical_index):
-        if logical_index in [0, 1]:  # Skip checkbox and icon columns
-            return
+        header.setDefaultSectionSize(100)
+        header.resizeSection(2, 150)  # Progress bar needs more space
         
-        header = self.horizontalHeader()
+        # Style
+        self.setShowGrid(False)
+        self.setAlternatingRowColors(True)
+        self.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        self.verticalHeader().hide()
         
-        # Update sort order
-        if self._current_sort_column == logical_index:
-            # Toggle sort order if clicking the same column
-            self._current_sort_order = (Qt.SortOrder.DescendingOrder 
-                if self._current_sort_order == Qt.SortOrder.AscendingOrder 
-                else Qt.SortOrder.AscendingOrder)
-        else:
-            # First click on new column, start with ascending
-            self._current_sort_order = Qt.SortOrder.AscendingOrder
-            self._current_sort_column = logical_index
-        
-        # Set the sort indicator before sorting
-        header.setSortIndicator(logical_index, self._current_sort_order)
-        
-        # Perform the sort
-        self.sortItems(logical_index, self._current_sort_order)
-        
-        # Emit the sorting changed signal
-        self.sortingChanged.emit(logical_index, self._current_sort_order)
-    
-    def handle_search(self, search_text):
-        """Filter table rows based on search text"""
-        # Store current sort state
-        sort_column = self._current_sort_column
-        sort_order = self._current_sort_order
-        
-        # Temporarily disable sorting
-        self.setSortingEnabled(False)
-        
-        # Get filtered downloads and update table
-        filtered_downloads = self.data_handler.filter_downloads(search_text)
-        self.populate_table(filtered_downloads)
-        
-        # Restore sorting
-        self.setSortingEnabled(True)
-        if sort_column >= 0:
-            self.sortItems(sort_column, sort_order)
-    
-    def populate_table(self, downloads):
-        """Populate table with the given downloads"""
-        self.setRowCount(len(downloads))
-        for row, download in enumerate(downloads):
-            items = self.data_handler.create_table_items(download, self._is_dark)
-            
-            # Set items in table
-            self.setItem(row, 0, items['id'])
-            self.setCellWidget(row, 0, items['checkbox'])
-            self.setItem(row, 1, items['icon'])
-            self.setItem(row, 2, items['name'])
-            self.setItem(row, 3, items['size'])
-            
-            if isinstance(items['status'], QTableWidgetItem):
-                self.setItem(row, 4, items['status'])
-            else:
-                self.setCellWidget(row, 4, items['status'])
-            
-            self.setItem(row, 5, items['time_left'])
-            self.setItem(row, 6, items['modified'])
-            self.setItem(row, 7, items['speed'])
-    
-    def setup_context_menus(self):
-        # Download context menu
+        # Context menu
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.customContextMenuRequested.connect(self.show_context_menu)
         
-        # Header context menu
-        header = self.horizontalHeader()
-        header.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
-        header.customContextMenuRequested.connect(self.show_header_context_menu)
+        # Apply initial theme
+        self.apply_theme()
     
-    def show_context_menu(self, pos):
-        row = self.rowAt(pos.y())
-        if row >= 0:
-            download_id = self.item(row, 0).data(Qt.ItemDataRole.UserRole)
-            self.context_menu.show_for_download(download_id, self.mapToGlobal(pos))
+    def apply_theme(self):
+        styles = Styles.get_styles(self._is_dark)
+        self.setStyleSheet(styles["TABLE"])
     
-    def show_header_context_menu(self, pos):
-        self.header_context_menu.show_menu(self.horizontalHeader().mapToGlobal(pos))
-    
-    def connect_signals(self):
-        # Connect context menu signals to handlers
-        self.context_menu.signals.openFile.connect(self.actions.handle_open_file)
-        self.context_menu.signals.openWith.connect(self.actions.handle_open_with)
-        self.context_menu.signals.openFolder.connect(self.actions.handle_open_folder)
-        self.context_menu.signals.moveRename.connect(self.actions.handle_move_rename)
-        self.context_menu.signals.redownload.connect(self.actions.handle_redownload)
-        self.context_menu.signals.resumeDownload.connect(self.actions.handle_resume_download)
-        self.context_menu.signals.stopDownload.connect(self.actions.handle_stop_download)
-        self.context_menu.signals.refreshAddress.connect(self.actions.handle_refresh_address)
-        self.context_menu.signals.addToQueue.connect(self.actions.handle_add_to_queue)
-        self.context_menu.signals.deleteFromQueue.connect(self.actions.handle_delete_from_queue)
-        self.context_menu.signals.showProperties.connect(self.actions.handle_show_properties)
-        
-        # Connect header context menu signals
-        self.header_context_menu.signals.columnVisibilityChanged.connect(
-            self.toggle_column_visibility)
-    
-    def toggle_column_visibility(self, column, visible):
-        self.setColumnHidden(column, not visible)
-    
-    def setHorizontalHeaderWidget(self, column, widget):
-        self.horizontalHeader().setMinimumSectionSize(widget.sizeHint().width())
-        self.setCellWidget(0, column, widget)
-    
-    def toggle_all_checkboxes(self, checked):
-        for row in range(self.rowCount()):
-            checkbox = self.cellWidget(row, 0)
-            if checkbox and isinstance(checkbox, RowCheckBox):
-                checkbox.setChecked(checked)
-    
-    def load_data(self):
-        downloads = self.data_handler.load_data()
-        self.populate_table(downloads)
-    
-    def update_theme(self, is_dark):
+    def update_theme(self, is_dark: bool):
+        """Update the theme of the table."""
         self._is_dark = is_dark
-        self.header_checkbox.update_style()
-        self.setStyleSheet(Styles.get_styles(self._is_dark)["TABLE"])
+        self.apply_theme()
         
+        # Update action buttons
         for row in range(self.rowCount()):
-            # Update checkbox
-            checkbox = self.cellWidget(row, 0)
-            if isinstance(checkbox, RowCheckBox):
-                checkbox.update_style()
-            
-            # Update file type icon
-            icon_item = self.item(row, 1)
-            if isinstance(icon_item, FileTypeIcon):
-                self.setItem(row, 1, FileTypeIcon(icon_item.file_type, is_dark))
+            actions_widget = self.cellWidget(row, 6)
+            if actions_widget:
+                for button in actions_widget.findChildren(QPushButton):
+                    icon_name = button.property("icon_name")
+                    if icon_name:
+                        button.setIcon(IconProvider.get_icon(icon_name, is_dark))
+    
+    def add_download(self, download: Download):
+        """Add or update a download in the table."""
+        if download.id in self.downloads:
+            self.update_download(download)
+            return
+        
+        self.downloads[download.id] = download
+        row = self.rowCount()
+        self.insertRow(row)
+        
+        # Name
+        name_item = QTableWidgetItem(os.path.basename(download.save_path))
+        name_item.setData(Qt.ItemDataRole.UserRole, download.id)
+        self.setItem(row, 0, name_item)
+        
+        # Status
+        status_item = QTableWidgetItem(download.status.value.title())
+        self.setItem(row, 1, status_item)
+        
+        # Progress
+        progress_bar = QProgressBar()
+        progress_bar.setRange(0, 100)
+        progress_bar.setValue(int(download.progress))
+        self.setCellWidget(row, 2, progress_bar)
+        
+        # Speed
+        speed_item = QTableWidgetItem(self.format_speed(download.speed))
+        self.setItem(row, 3, speed_item)
+        
+        # Size
+        size_item = QTableWidgetItem(self.format_size(download.total_size))
+        self.setItem(row, 4, size_item)
+        
+        # Remaining
+        remaining_item = QTableWidgetItem("")  # Will be updated
+        self.setItem(row, 5, remaining_item)
+        
+        # Actions
+        actions_widget = self.create_actions_widget(download)
+        self.setCellWidget(row, 6, actions_widget)
+    
+    def update_download(self, download: Download):
+        """Update an existing download in the table."""
+        row = self.find_download_row(download.id)
+        if row is None:
+            return
+        
+        # Update status
+        self.item(row, 1).setText(download.status.value.title())
+        
+        # Update progress
+        progress_bar = self.cellWidget(row, 2)
+        progress_bar.setValue(int(download.progress))
+        
+        # Update speed
+        self.item(row, 3).setText(self.format_speed(download.speed))
+        
+        # Update size
+        self.item(row, 4).setText(self.format_size(download.total_size))
+        
+        # Update remaining
+        if download.speed > 0 and download.total_size:
+            remaining = (download.total_size - download.downloaded_size) / download.speed
+            self.item(row, 5).setText(self.format_time(remaining))
+        else:
+            self.item(row, 5).setText("")
+        
+        # Update actions
+        self.cellWidget(row, 6).update_buttons(download)
+    
+    def remove_download(self, download_id: str):
+        """Remove a download from the table."""
+        row = self.find_download_row(download_id)
+        if row is not None:
+            self.removeRow(row)
+            del self.downloads[download_id]
+    
+    def find_download_row(self, download_id: str) -> Optional[int]:
+        """Find the row index for a download ID."""
+        for row in range(self.rowCount()):
+            item = self.item(row, 0)
+            if item.data(Qt.ItemDataRole.UserRole) == download_id:
+                return row
+        return None
+    
+    def create_actions_widget(self, download: Download) -> QWidget:
+        """Create the actions widget for a download."""
+        widget = QWidget()
+        layout = QHBoxLayout(widget)
+        layout.setContentsMargins(0, 0, 0, 0)
+        
+        # Start/Pause button
+        start_pause_btn = QPushButton()
+        start_pause_btn.setFixedSize(24, 24)
+        start_pause_btn.clicked.connect(
+            lambda: self.download_action.emit(
+                "pause" if download.status == DownloadStatus.DOWNLOADING else "resume",
+                download.id
+            )
+        )
+        
+        # Stop button
+        stop_btn = QPushButton()
+        stop_btn.setFixedSize(24, 24)
+        stop_btn.setIcon(IconProvider.get_icon("stop", self._is_dark))
+        stop_btn.setProperty("icon_name", "stop")
+        stop_btn.clicked.connect(
+            lambda: self.download_action.emit("stop", download.id)
+        )
+        
+        layout.addWidget(start_pause_btn)
+        layout.addWidget(stop_btn)
+        
+        # Update initial button states
+        widget.update_buttons = lambda d: self.update_action_buttons(
+            start_pause_btn, stop_btn, d
+        )
+        widget.update_buttons(download)
+        
+        return widget
+    
+    def update_action_buttons(self, start_pause_btn: QPushButton, 
+                            stop_btn: QPushButton, download: Download):
+        """Update action button states based on download status."""
+        if download.status == DownloadStatus.DOWNLOADING:
+            start_pause_btn.setIcon(IconProvider.get_icon("pause", self._is_dark))
+            start_pause_btn.setProperty("icon_name", "pause")
+            start_pause_btn.setEnabled(True)
+            stop_btn.setEnabled(True)
+        elif download.status == DownloadStatus.PAUSED:
+            start_pause_btn.setIcon(IconProvider.get_icon("resume", self._is_dark))
+            start_pause_btn.setProperty("icon_name", "resume")
+            start_pause_btn.setEnabled(True)
+            stop_btn.setEnabled(True)
+        elif download.status == DownloadStatus.QUEUED:
+            start_pause_btn.setIcon(IconProvider.get_icon("resume", self._is_dark))
+            start_pause_btn.setProperty("icon_name", "resume")
+            start_pause_btn.setEnabled(True)
+            stop_btn.setEnabled(True)
+        elif download.status == DownloadStatus.COMPLETED:
+            start_pause_btn.setEnabled(False)
+            stop_btn.setEnabled(False)
+        else:  # ERROR or other states
+            start_pause_btn.setIcon(IconProvider.get_icon("resume", self._is_dark))
+            start_pause_btn.setProperty("icon_name", "resume")
+            start_pause_btn.setEnabled(True)
+            stop_btn.setEnabled(True)
+    
+    def show_context_menu(self, position):
+        """Show context menu for download actions."""
+        item = self.itemAt(position)
+        if not item:
+            return
+        
+        row = item.row()
+        download_id = self.item(row, 0).data(Qt.ItemDataRole.UserRole)
+        download = self.downloads[download_id]
+        
+        menu = QMenu(self)
+        
+        # Add actions based on download status
+        if download.status == DownloadStatus.DOWNLOADING:
+            menu.addAction("Pause", lambda: self.download_action.emit("pause", download_id))
+        elif download.status in [DownloadStatus.PAUSED, DownloadStatus.ERROR]:
+            menu.addAction("Resume", lambda: self.download_action.emit("resume", download_id))
+        
+        menu.addAction("Stop", lambda: self.download_action.emit("stop", download_id))
+        menu.addSeparator()
+        menu.addAction("Remove", lambda: self.download_action.emit("remove", download_id))
+        
+        # Show menu
+        menu.exec(self.viewport().mapToGlobal(position))
+    
+    @staticmethod
+    def format_size(size: Optional[int]) -> str:
+        """Format size in bytes to human readable string."""
+        if size is None:
+            return "Unknown"
+        
+        for unit in ['B', 'KB', 'MB', 'GB']:
+            if size < 1024:
+                return f"{size:.1f} {unit}"
+            size /= 1024
+        return f"{size:.1f} TB"
+    
+    @staticmethod
+    def format_speed(speed: float) -> str:
+        """Format speed in bytes/second to human readable string."""
+        if speed == 0:
+            return ""
+        return f"{DownloadTableWidget.format_size(speed)}/s"
+    
+    @staticmethod
+    def format_time(seconds: float) -> str:
+        """Format time in seconds to human readable string."""
+        if seconds < 60:
+            return f"{int(seconds)}s"
+        elif seconds < 3600:
+            return f"{int(seconds/60)}m {int(seconds%60)}s"
+        else:
+            hours = int(seconds/3600)
+            minutes = int((seconds%3600)/60)
+            return f"{hours}h {minutes}m"

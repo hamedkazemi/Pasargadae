@@ -1,41 +1,47 @@
 from PyQt6.QtWidgets import QWidget, QVBoxLayout
-from src.components.downloads.download_table import DownloadTable
-from src.components.downloads.search_bar import SearchContainer
-from src.theme.styles import Styles
+from .download_table import DownloadTableWidget
+from .search_bar import SearchBar
 
 class DownloadPanel(QWidget):
-    def __init__(self, is_dark=True, parent=None):
-        super().__init__(parent)
-        self._is_dark = is_dark
+    def __init__(self, parent=None):
+        super().__init__()
         self.setup_ui()
     
     def setup_ui(self):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(10)
+        layout.setSpacing(0)
         
-        # Add search bar
-        self.search_bar = SearchContainer(self._is_dark)
-        self.search_bar.searchTextChanged.connect(self.handle_search)
+        # Search bar
+        self.search_bar = SearchBar()
         layout.addWidget(self.search_bar)
         
-        # Add download table
-        self.download_table = DownloadTable(self._is_dark)
+        # Download table
+        self.download_table = DownloadTableWidget()
         layout.addWidget(self.download_table)
         
-        self.apply_theme()
+        # Connect signals
+        #self.search_bar.searchTextChanged.connect(self.filter_downloads)
     
-    def handle_search(self, text):
-        """Handle search text changes"""
-        self.download_table.handle_search(text)
+    def filter_downloads(self, search_text: str):
+        """Filter downloads based on search text."""
+        for row in range(self.download_table.rowCount()):
+            item = self.download_table.item(row, 0)  # Name column
+            should_show = not search_text or search_text.lower() in item.text().lower()
+            self.download_table.setRowHidden(row, not should_show)
     
-    def apply_theme(self):
-        styles = Styles.get_styles(self._is_dark)
-        self.setStyleSheet(styles["WINDOW"])
+    def add_download(self, download):
+        """Add a new download to the table."""
+        self.download_table.add_download(download)
     
-    def update_theme(self, is_dark):
-        """Update theme for all child widgets"""
-        self._is_dark = is_dark
-        self.search_bar.update_theme(is_dark)
-        self.download_table.update_theme(is_dark)
-        self.apply_theme()
+    def update_download(self, download):
+        """Update an existing download in the table."""
+        self.download_table.update_download(download)
+    
+    def remove_download(self, download_id: str):
+        """Remove a download from the table."""
+        self.download_table.remove_download(download_id)
+        
+        
+    def update_theme(is_dark):
+        print("theme should update here")    

@@ -4,6 +4,9 @@ from PyQt6.QtCore import Qt, QSize
 from src.theme.styles import Styles
 from src.utils.icon_provider import IconProvider
 from src.theme.colors import Colors
+from src.components.modal.download_modal import DownloadModal
+from src.components.modal.settings_modal import SettingsModal
+from src.utils.logger import Logger
 
 class ToolbarSeparator(QWidget):
     def __init__(self, is_dark=True, parent=None):
@@ -36,17 +39,17 @@ class ActionToolbar(QToolBar):
     
     def setup_ui(self):
         actions = [
-            ("Add URL", "add_url"),
+            ("Add URL", "add_url", self.show_download_modal),
             None,  # Separator
-            ("Resume", "resume"),
-            ("Stop", "stop"),
-            ("Stop All", "stop"),
+            ("Resume", "resume", None),
+            ("Stop", "stop", None),
+            ("Stop All", "stop", None),
             None,  # Separator
-            ("Delete", "delete"),
-            ("Options", "options"),
-            ("Queues", "queue"),
-            ("Schedule", "schedule"),
-            ("Share", "share")
+            ("Delete", "delete", None),
+            ("Options", "options", self.show_settings_modal),
+            ("Queues", "queue", None),
+            ("Schedule", "schedule", None),
+            ("Share", "share", None)
         ]
         
         # Clear existing buttons and separators
@@ -65,13 +68,38 @@ class ActionToolbar(QToolBar):
                 self._separators.append(separator)
                 self.addWidget(separator)
             else:
-                name, icon = action
+                name, icon, callback = action
                 btn = QToolButton()
                 btn.setIcon(IconProvider.get_icon(icon, self._is_dark))
                 btn.setToolTip(name)
                 btn.setIconSize(QSize(24, 24))
+                if callback:
+                    btn.clicked.connect(callback)
                 self._buttons.append((btn, icon))  # Store button and icon name
                 self.addWidget(btn)
+    
+    def show_download_modal(self):
+        Logger.debug("Opening download modal")
+        try:
+            # Get main window
+            main_window = self.window()
+            
+            # Create modal with the main window as parent and pass managers
+            modal = DownloadModal(
+                parent=main_window,
+                download_manager=main_window.download_manager,
+                settings_manager=main_window.settings_manager
+            )
+            modal.exec()
+        except Exception as e:
+            Logger.error(f"Error showing download modal: {e}")
+    
+    def show_settings_modal(self):
+        # Create modal with the main window as parent
+        modal = SettingsModal(self.window())
+        # Ensure modal stays on top and is independent
+        modal.setWindowModality(Qt.WindowModality.ApplicationModal)
+        modal.exec()
     
     def update_theme(self, is_dark):
         self._is_dark = is_dark

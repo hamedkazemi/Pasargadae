@@ -14,11 +14,10 @@ class RowCheckBox(QCheckBox):
                 spacing: 0px;
             }}
             QCheckBox::indicator {{
-                width: 16px;
-                height: 16px;
-                border: 2px solid {colors.TEXT_SECONDARY};
-                border-radius: 4px;
-                background: transparent;
+                width: 15px;
+                height: 15px;
+                border: 0px solid {colors.TEXT_SECONDARY};
+                image: url(src/assets/icons/uncheck.svg);
             }}
             QCheckBox::indicator:checked {{
                 background: {colors.PRIMARY};
