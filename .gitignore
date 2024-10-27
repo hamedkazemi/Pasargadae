@@ -1,4 +1,11 @@
 # Python
+
+# C extensions
+*.so
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
 __pycache__/
 */__pycache__/
 */*/__pycache__/
